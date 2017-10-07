@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+#https://www.pololu.com/docs/0J29/all
+
 import serial
 import time
 import array
@@ -28,11 +30,11 @@ class SerialDriver:
         
     def sendReceive(self,sendArray, receiveLength):
         writeBuf = array.array("B",sendArray)
-        self.ser.flushOutput()
+        #self.ser.flushOutput()
         self.ser.flushInput()
         
         self.ser.write(writeBuf)
-        self.ser.flush()
+        #self.ser.flush()
         
         readBuf = self.ser.read(receiveLength)
         res = array.array("B",readBuf)
@@ -47,7 +49,8 @@ class MotorController:
         self.id = deviceID
     
     def stopAll(self):
-        print("Stopping all movement")
+        self.setMotorSpeed(0,0)
+        self.setMotorSpeed(1,0)
 
     def getFirmwareVersion(self):
         res = self.driver.sendReceive([0xaa,self.id,0x01],1)
@@ -59,14 +62,18 @@ class MotorController:
         speed -1.0 to 1.0"""
 
         dir = speed >= 0
+
+        byteSpeed = int(abs(speed)*127)
+        
         cmd = 0
         cmd |= dir << 1
         cmd |= motorID << 2
         cmd |= 1 << 3
-        print cmd
+
+        self.driver.sendReceive([0xaa,self.id,cmd,byteSpeed],0)
         
 
-
+import math
 d = SerialDriver('/dev/serial0',9600)
 
 c1 = d.getController(10)
@@ -74,8 +81,14 @@ c1 = d.getController(10)
 
 c1.getFirmwareVersion()
 
-c1.setMotorSpeed(0,0)
-c1.setMotorSpeed(1,0)
 
+
+deg = 0
+while deg < 6:
+    deg += 0.01
+    c1.setMotorSpeed(0,math.sin(deg))
+    c1.setMotorSpeed(1,math.sin(deg))
+
+d.close()
 
     
